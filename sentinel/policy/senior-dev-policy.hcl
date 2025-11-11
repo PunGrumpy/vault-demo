@@ -1,8 +1,8 @@
 # Senior devs can access all environments
-path "secret/data/*" {
-  capabilities = ["read", "list"]
+path "secret/*" {
+  capabilities = ["read", "list", "update"]
 }
 
-path "secret/metadata/*" {
-  capabilities = ["list"]
+path "secret/production/*" {
+  capabilities = ["read", "list"]
 }

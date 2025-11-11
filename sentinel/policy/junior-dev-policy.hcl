@@ -1,13 +1,13 @@
 # Junior dev can access dev/staging only
-path "secret/data/development/*" {
+path "secret/development/*" {
   capabilities = ["read", "list"]
 }
 
-path "secret/data/staging/*" {
+path "secret/staging/*" {
   capabilities = ["read", "list"]
 }
 
 # 🚨 Need Sentinel for production access
-path "secret/data/production/*" {
+path "secret/production/*" {
   capabilities = ["read"]
 }
