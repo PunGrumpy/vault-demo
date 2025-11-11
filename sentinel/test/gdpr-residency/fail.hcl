@@ -1,7 +1,7 @@
 # Mock the request global - wrong IP address
 global "request" {
     value = {
-        path = "secret/thai-customers/user-123"  # Allowed path
+        path = "secret/data/thai-customers/user-123"  # Allowed path
         connection = {
             remote_addr = "192.168.1.1"  # Not allowed IP address
         }

@@ -10,7 +10,7 @@ check_cidr = rule {
 }
 
 is_allowed_path = rule {
-	strings.has_prefix(request.path, "secret/thai-customers/")
+	strings.has_prefix(request.path, "secret/data/thai-customers/")
 }
 
 main = rule when is_allowed_path {
