@@ -4,7 +4,7 @@ global "request" {
         path = "secret/data/production/database"
         entity = {
             metadata = {
-                role = "junior-dev"  # Not senior-dev, should fail
+                role = "junior-engineer"  # Not senior-engineer, should fail
             }
         }
     }
@@ -22,7 +22,7 @@ mock "time" {
 
 test {
     rules = {
-        main = false  # Should fail because role is not senior-dev
+        main = false  # Should fail because role is not senior-engineer
         is_business_hours = true
         is_senior = false
         is_production_path = true

@@ -4,7 +4,7 @@ global "request" {
         path = "secret/data/production/database"
         entity = {
             metadata = {
-                role = "senior-dev"
+                role = "senior-engineer"
             }
         }
     }

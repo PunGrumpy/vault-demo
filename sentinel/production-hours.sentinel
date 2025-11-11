@@ -21,7 +21,7 @@ is_production_path = rule {
 
 # Only senior dev
 is_senior = rule {
-	request.entity.metadata.role == "senior-dev"
+	request.entity.metadata.role == "senior-engineer"
 }
 
 main = rule when is_production_path {
