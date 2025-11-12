@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Color definitions
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    RESET='\033[0m'
+else
+    RED='' GREEN='' YELLOW='' BLUE='' CYAN='' RESET=''
+fi
+
 readonly ENV_EXAMPLE=".env.example"
 readonly ENV_FILE=".env"
 
@@ -31,10 +43,10 @@ extract_value() {
   fi
 }
 
-[[ ! -f "$ENV_EXAMPLE" ]] && echo "❌ $ENV_EXAMPLE not found" >&2 && exit 1
+[[ ! -f "$ENV_EXAMPLE" ]] && echo -e "${RED}[ERROR]${RESET} $ENV_EXAMPLE not found" >&2 && exit 1
 
 if [[ -f "$ENV_FILE" ]]; then
-  read -p "⚠️  $ENV_FILE exists. Overwrite? (y/N): " -n 1 -r
+  read -p "$(echo -e "${YELLOW}[WARN]${RESET} $ENV_FILE exists. Overwrite? (y/N): ")" -n 1 -r
   echo
   [[ ! $REPLY =~ ^[Yy]$ ]] && echo "Aborted." && exit 0
 fi
@@ -49,9 +61,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   defaults["$key"]=$(extract_value "$line")
 done < "$ENV_EXAMPLE"
 
-[[ ${#keys[@]} -eq 0 ]] && echo "❌ No variables found in $ENV_EXAMPLE" >&2 && exit 1
+[[ ${#keys[@]} -eq 0 ]] && echo -e "${RED}[ERROR]${RESET} No variables found in $ENV_EXAMPLE" >&2 && exit 1
 
-echo "🛠️  Environment Setup"
+echo -e "${CYAN}[SETUP]${RESET} Environment Setup"
 echo "Variables to configure:"
 for key in "${keys[@]}"; do echo "  • $key"; done
 echo
@@ -74,16 +86,21 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
 done < "$ENV_EXAMPLE"
 
-echo "✅ Created $ENV_FILE"
-echo "🚀 Exporting variables..."
-echo "If you are using a fish shell, you can run ./scripts/export.fish to export the variables"
+echo -e "${GREEN}[OK]${RESET} Created $ENV_FILE"
+echo -e "${CYAN}[EXPORT]${RESET} Exporting variables..."
+echo ""
+echo -e "${CYAN}[TIP]${RESET} If you only want to export environment variables (without setup),"
+echo "   you can use the scripts in the scripts/ folder:"
+echo "   • For bash: source ./scripts/export.sh"
+echo "   • For fish: source ./scripts/export.fish"
+echo ""
 
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ -z "$line" ]] || [[ "$line" =~ ^[[:space:]]*# ]] || [[ "$line" != *"="* ]] && continue
   key=$(trim "${line%%=*}")
   value=$(unquote "$(trim "${line#*=}")")
   export "$key"="$value"
-  echo "✓ $key = $value"
+  echo -e "${GREEN}[OK]${RESET} $key = $value"
 done < "$ENV_FILE"
 
-echo "✅ Done"
+echo -e "${GREEN}[OK]${RESET} Done"
