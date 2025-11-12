@@ -1,0 +1,7 @@
+# Public and Private Keys
+ca_cert.pem
+private_key.pem
+public_key.pem
+
+# Snapshot
+vault-snapshot-*.snap
