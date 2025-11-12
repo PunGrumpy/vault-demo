@@ -1,4 +1,4 @@
-<h1 style="font-family: 'JetBrains Mono', monospace;">Vault Demo</h1>
+# Vault Demo
 
 Demo project for HashiCorp Vault Enterprise version
 
