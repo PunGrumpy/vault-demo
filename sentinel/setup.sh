@@ -109,3 +109,21 @@ vault kv put secret/production/payment-gateway api_key="pk_live_XXXXXXXXXX" merc
 vault kv put secret/thai-customers/user-123 email="customer@thai.com" pii="sensitive_data"
 
 info "Demo secrets created!"
+
+# =========================
+# Apply Sentinel policies
+# =========================
+info "Applying Sentinel policies..."
+
+vault write sys/policies/egp/production-hours policy=@production-hours.sentinel \
+  enforcement_level="hard-mandatory" \
+  paths="secret/data/production/*"
+
+vault write sys/policies/egp/gdpr-residency policy=@gdpr-residency.sentinel \
+  enforcement_level="hard-mandatory" \
+  paths="secret/data/thai-customers/*"
+
+vault write sys/policies/rgp/policy-governance policy=@admin-policy.sentinel \
+  enforcement_level="soft-mandatory"
+
+info "Sentinel policies applied!"
