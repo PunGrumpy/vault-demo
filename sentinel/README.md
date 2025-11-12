@@ -10,124 +10,149 @@
 - **3 Vault Policies** สำหรับแต่ละบทบาท
 - **Demo Secrets** ในหลาย environments
 - **Identity Entities** พร้อม metadata สำหรับการควบคุมแบบละเอียด
+- **3 Sentinel Policies** (2 EGP + 1 RGP) สำหรับการควบคุมการเข้าถึงแบบละเอียด
 
 ## 🚀 การใช้งาน
 
-**สำคัญ**: ต้องรันสคริปต์ตามลำดับต่อไปนี้:
+### Quick Start
 
-### 1. สร้าง Vault Policies
-
-สร้าง Vault policies สำหรับแต่ละบทบาท:
+รันสคริปต์เดียวเพื่อ setup ทุกอย่าง:
 
 ```bash
-./policies.sh
+./setup.sh
 ```
 
-สคริปต์นี้จะสร้าง policies ต่อไปนี้:
+สคริปต์นี้จะทำการ:
 
-- `junior-dev` - สำหรับ Junior Developer
-- `senior-dev` - สำหรับ Senior Developer
-- `security-admin` - สำหรับ Security Admin
+1. ✅ สร้าง Vault ACL policies (junior-dev, senior-dev, security-admin)
+2. ✅ สร้าง users ภายใต้ `auth/userpass` (alice, bob, charlie)
+3. ✅ สร้าง Identity entities พร้อม metadata
+4. ✅ Enable KV v2 secrets engine และสร้าง demo secrets
+5. ✅ Apply Sentinel EGP และ RGP policies
 
-### 2. สร้าง Users และ Roles
+### ตรวจสอบการติดตั้ง
 
-สร้าง users พร้อม identity entities:
+หลังจากรัน `setup.sh` แล้ว คุณสามารถตรวจสอบได้ว่า:
 
 ```bash
-./roles.sh
+# ตรวจสอบ policies
+vault policy list
+
+# ตรวจสอบ users
+vault list auth/userpass/users
+
+# ตรวจสอบ secrets
+vault kv list secret/
+
+# ตรวจสอบ Sentinel policies
+vault list sys/policies/egp
+vault list sys/policies/rgp
 ```
 
-สคริปต์นี้จะสร้าง:
+## 👥 Users และบทบาท
 
-#### 👩‍💻 Alice - Junior Developer
+### 👩‍💻 Alice - Junior Developer
 
 - **Username**: `alice`
 - **Password**: `alice123`
 - **Policy**: `junior-dev`
 - **สิทธิ์**:
   - อ่าน secrets ใน `development` และ `staging` environments
-  - อ่าน `production` secrets (แต่ต้องผ่าน Sentinel policy)
+  - อ่าน `production` secrets (แต่ต้องผ่าน Sentinel policy `production-hours`)
 - **Identity Metadata**:
-  - `role`: junior-engineer
-  - `department`: engineering
-  - `clearance_level`: 1
+  - `role`: Junior Developer
 
-#### 👨‍💻 Bob - Senior Developer
+### 👨‍💻 Bob - Senior Developer
 
 - **Username**: `bob`
 - **Password**: `bob123`
 - **Policy**: `senior-dev`
 - **สิทธิ์**:
-  - อ่าน secrets ในทุก environments
+  - อ่านและ list secrets ในทุก environments
   - ดู metadata ของ secrets
 - **Identity Metadata**:
-  - `role`: senior-engineer
-  - `department`: engineering
-  - `clearance_level`: 3
-  - `transaction_limit`: 10000
+  - `role`: Senior Developer
 
-#### 👨‍🔒 Charlie - Security Admin
+### 👨‍🔒 Charlie - Security Admin
 
 - **Username**: `charlie`
 - **Password**: `charlie123`
 - **Policy**: `security-admin`
 - **สิทธิ์**:
   - Full access ถึงทุก secrets (create, read, update, delete, list)
-  - จัดการ Sentinel policies
+  - จัดการ Sentinel policies (EGP และ RGP)
+- **Identity Metadata**:
+  - `role`: Security Admin
+  - `name`: Charlie Chan
 
-### 3. สร้าง Demo Secrets
+## 🔐 Demo Secrets
 
-สร้าง secrets สำหรับทดสอบ:
+โปรเจกต์นี้สร้าง secrets ต่อไปนี้:
 
-```bash
-./secrets.sh
-```
+- `secret/development/database` - Database credentials สำหรับ development
+- `secret/staging/database` - Database credentials สำหรับ staging
+- `secret/production/database` - Database credentials สำหรับ production
+- `secret/production/payment-gateway` - Payment gateway credentials
+- `secret/thai-customers/user-123` - Customer PII data (GDPR protected)
 
-สคริปต์นี้จะ:
+## 🛡️ Sentinel Policies
 
-- Enable KV v2 secrets engine ที่ path `secret`
-- สร้าง secrets ต่อไปนี้:
-  - `secret/development/database` - Database credentials สำหรับ development
-  - `secret/staging/database` - Database credentials สำหรับ staging
-  - `secret/production/database` - Database credentials สำหรับ production
-  - `secret/production/payment-gateway` - Payment gateway credentials
-  - `secret/thai-customers/user-123` - Customer PII data
+### EGP Policies (Endpoint Governing Policies)
 
-### 4. Apply Sentinel Policies
+#### 1. `production-hours.sentinel`
 
-Apply Sentinel EGP (Endpoint Governing Policies) และ RGP (Role Governing Policies):
+**Path**: `secret/data/production/*`  
+**Enforcement**: `hard-mandatory`
 
-```bash
-./apply-sentinel-policies.sh
-```
+จำกัดการเข้าถึง production secrets โดย:
 
-สคริปต์นี้จะ apply policies ต่อไปนี้:
+- ✅ อนุญาตเฉพาะ **เวลาทำการ** (9 AM - 6 PM UTC+7, วันจันทร์-ศุกร์)
+- ✅ อนุญาตเฉพาะ **Senior Developers** (`role == "Senior Developer"`)
 
-#### EGP Policies (Endpoint Governing Policies)
+**Logic**:
 
-1. **gdpr-residency** - จำกัดการเข้าถึง `secret/data/thai-customers/*`
-   - Enforcement: `hard-mandatory`
-   - ตรวจสอบ IP address ของผู้ใช้
+- ตรวจสอบว่าเป็นวันทำงาน (Monday-Friday, weekday 1-5)
+- ตรวจสอบว่าเป็นเวลาทำการ (UTC+7 = UTC hour 2-11)
+- ตรวจสอบ role จาก entity metadata
 
-2. **production-hours** - จำกัดการเข้าถึง `secret/data/production/*`
-   - Enforcement: `hard-mandatory`
-   - จำกัดเฉพาะเวลาทำการ (9 AM - 6 PM UTC+7) และเฉพาะ senior engineers
+#### 2. `gdpr-residency.sentinel`
 
-3. **transaction-limit** - จำกัดการเข้าถึง `secret/data/production/payment/*`
-   - Enforcement: `hard-mandatory`
-   - ตรวจสอบ transaction limit จาก entity metadata
+**Path**: `secret/data/thai-customers/*`  
+**Enforcement**: `hard-mandatory`
 
-#### RGP Policies (Role Governing Policies)
+จำกัดการเข้าถึงข้อมูลลูกค้าไทยตาม IP address:
 
-1. **policy-governance** - ควบคุมการจัดการ policies
-   - Enforcement: `soft-mandatory`
+- ✅ อนุญาตเฉพาะ IP address ที่อยู่ใน CIDR `129.41.56.7/32`
+- ใช้สำหรับการควบคุม GDPR residency requirements
+
+**Logic**:
+
+- ตรวจสอบ `request.connection.remote_addr` ว่าอยู่ใน CIDR ที่อนุญาต
+- ใช้ `sockaddr` import สำหรับการตรวจสอบ CIDR
+
+### RGP Policies (Role Governing Policies)
+
+#### 3. `admin-policy.sentinel`
+
+**Path**: `sys/policies/acl/security-admin`  
+**Enforcement**: `soft-mandatory`
+
+ควบคุมการจัดการ security-admin policy:
+
+- ✅ อนุญาตเฉพาะ Security Admin (`role == "Security Admin"`)
+- ✅ หรือ entity name เป็น "Charlie Chan"
+
+**Logic**:
+
+- ตรวจสอบ entity metadata หรือ entity name
+- ใช้สำหรับ policy governance
 
 ## 🔍 การทดสอบ
 
 ### Login เป็น Alice (Junior Developer)
 
 ```bash
-vault auth -method=userpass username=alice password=alice123
+vault login -method=userpass username=alice password=alice123
 ```
 
 ทดสอบการเข้าถึง:
@@ -137,33 +162,42 @@ vault auth -method=userpass username=alice password=alice123
 vault kv get secret/development/database
 vault kv get secret/staging/database
 
-# ⚠️ ต้องผ่าน Sentinel policy
+# ⚠️ ต้องผ่าน Sentinel policy (production-hours)
+# จะผ่านได้เฉพาะเวลาทำการ หรือเป็น Senior Developer
+# Alice เป็น Junior Developer ดังนั้นจะผ่านได้เฉพาะเวลาทำการ
 vault kv get secret/production/database
 
-# ❌ ไม่สามารถเข้าถึงได้
+# ❌ ไม่สามารถเข้าถึงได้ (ไม่มีสิทธิ์ใน policy)
 vault kv get secret/production/payment-gateway
+vault kv get secret/thai-customers/user-123
 ```
 
 ### Login เป็น Bob (Senior Developer)
 
 ```bash
-vault auth -method=userpass username=bob password=bob123
+vault login -method=userpass username=bob password=bob123
 ```
 
 ทดสอบการเข้าถึง:
 
 ```bash
-# ✅ ควรเข้าถึงได้ทุกอย่าง
+# ✅ ควรเข้าถึงได้ทุกอย่าง (ถ้าผ่าน Sentinel policies)
 vault kv get secret/development/database
 vault kv get secret/staging/database
+
+# ✅ เข้าถึงได้เฉพาะเวลาทำการ (9 AM - 6 PM UTC+7, Mon-Fri)
 vault kv get secret/production/database
 vault kv get secret/production/payment-gateway
+
+# ⚠️ ต้องผ่าน Sentinel policy (gdpr-residency)
+# จะผ่านได้เฉพาะ IP address ที่อนุญาต
+vault kv get secret/thai-customers/user-123
 ```
 
 ### Login เป็น Charlie (Security Admin)
 
 ```bash
-vault auth -method=userpass username=charlie password=charlie123
+vault login -method=userpass username=charlie password=charlie123
 ```
 
 ทดสอบการเข้าถึง:
@@ -175,48 +209,100 @@ vault kv put secret/test/new-secret key=value
 vault kv delete secret/test/new-secret
 
 # ✅ จัดการ Sentinel policies
-vault list sys/policies/sentinel
+vault list sys/policies/egp
+vault list sys/policies/rgp
+vault read sys/policies/egp/production-hours
 ```
 
 ## 📄 Policy Files
 
-### Vault Policies (HCL)
+### Vault ACL Policies
 
-#### `policy/junior-dev-policy.hcl`
+สคริปต์ `setup.sh` สร้าง policies ต่อไปนี้:
 
-- อ่าน secrets ใน `development` และ `staging`
-- อ่าน `production` secrets (แต่ต้องผ่าน Sentinel)
+#### `junior-dev`
 
-#### `policy/senior-dev-policy.hcl`
+```hcl
+path "secret/data/development/*" {
+  capabilities = ["read", "list"]
+}
+path "secret/data/staging/*" {
+  capabilities = ["read", "list"]
+}
+path "secret/data/production/*" {
+  capabilities = ["read"]
+}
+```
 
-- อ่านและ list secrets ในทุก environments
-- ดู metadata ของ secrets
+#### `senior-dev`
 
-#### `policy/security-admin-policy.hcl`
+```hcl
+path "secret/data/*" {
+  capabilities = ["read", "list"]
+}
+path "secret/metadata/*" {
+  capabilities = ["list"]
+}
+```
 
-- Full access ถึงทุก secrets
-- จัดการ Sentinel policies (EGP และ RGP)
+#### `security-admin`
+
+```hcl
+path "secret/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "sys/policies/egp/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "sys/policies/rgp/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+```
 
 ### Sentinel Policies
 
 #### `production-hours.sentinel`
 
 - จำกัดการเข้าถึง production secrets เฉพาะเวลาทำการ (9 AM - 6 PM UTC+7)
-- อนุญาตเฉพาะ senior engineers (`role == "senior-engineer"`)
+- อนุญาตเฉพาะ senior engineers (`role == "Senior Developer"`)
 - ใช้กับ path: `secret/data/production/*`
 
 #### `gdpr-residency.sentinel`
 
 - จำกัดการเข้าถึงข้อมูลลูกค้าไทยตาม IP address
-- ตรวจสอบว่า IP address อยู่ใน CIDR ที่อนุญาต
+- ตรวจสอบว่า IP address อยู่ใน CIDR ที่อนุญาต (`129.41.56.7/32`)
 - ใช้กับ path: `secret/data/thai-customers/*`
 
-#### `transaction-limit.sentinel`
+#### `admin-policy.sentinel`
 
-- จำกัดจำนวนเงินในการทำธุรกรรม
-- ตรวจสอบ `transaction_limit` จาก entity metadata
-- เปรียบเทียบกับ `max_amount` ใน request data
-- ใช้กับ path: `secret/data/production/payment-gateway`
+- ควบคุมการจัดการ security-admin policy
+- ตรวจสอบ entity role หรือ name
+- ใช้กับ path: `sys/policies/acl/security-admin`
+
+## 🧪 Testing Sentinel Policies
+
+โปรเจกต์นี้รวม test cases สำหรับ Sentinel policies ในโฟลเดอร์ `test/`:
+
+- `test/production-hours/` - Test cases สำหรับ production-hours policy
+  - `success.hcl` - Test case ที่ควรผ่าน
+  - `fail.hcl` - Test case ที่ควรล้มเหลว
+- `test/gdpr-residency/` - Test cases สำหรับ gdpr-residency policy
+  - `success.hcl` - Test case ที่ควรผ่าน
+  - `fail.hcl` - Test case ที่ควรล้มเหลว
+  - `mock-sockaddr.sentinel` - Mock สำหรับ sockaddr import
+- `test/admin-policy/` - Test cases สำหรับ admin-policy
+  - `success.hcl` - Test case ที่ควรผ่าน
+  - `fail.hcl` - Test case ที่ควรล้มเหลว
+
+### รัน Tests
+
+```bash
+# ตัวอย่าง: ทดสอบ production-hours policy
+sentinel test production-hours.sentinel
+
+# ทดสอบทุก policies
+sentinel test *.sentinel
+```
 
 ## 🔐 Identity Entities
 
@@ -226,29 +312,19 @@ vault list sys/policies/sentinel
 - เก็บ metadata สำหรับการควบคุมแบบละเอียด
 - รองรับการใช้งาน Sentinel policies ที่ตรวจสอบ metadata
 
-## 🧪 Testing Sentinel Policies
-
-โปรเจกต์นี้รวม test cases สำหรับ Sentinel policies ในโฟลเดอร์ `test/`:
-
-- `test/production-hours/` - Test cases สำหรับ production-hours policy
-- `test/transaction-limit/` - Test cases สำหรับ transaction-limit policy
-- `test/gdpr-residency/` - Test cases สำหรับ gdpr-residency policy
-
-แต่ละโฟลเดอร์มี:
-- `success.hcl` - Test case ที่ควรผ่าน
-- `fail.hcl` - Test case ที่ควรล้มเหลว
-- Mock files (ถ้ามี) - สำหรับทดสอบ imports เช่น `mock-decimal.sentinel`, `mock-sockaddr.sentinel`
+Identity entities ถูกสร้างพร้อมกับ users และเชื่อมโยงผ่าน entity aliases
 
 ## 📝 หมายเหตุ
 
 - ตรวจสอบให้แน่ใจว่า Vault server ทำงานอยู่ก่อนรันสคริปต์
-- **ต้องรันตามลำดับ**: `policies.sh` → `roles.sh` → `secrets.sh` → `apply-sentinel-policies.sh`
-- Passwords เป็นตัวอย่างเท่านั้น ควรเปลี่ยนใน production
 - **สำหรับ Sentinel policies ที่แท้จริง ต้องใช้ Vault Enterprise**
 - Sentinel policies จะถูก apply เป็น EGP (Endpoint Governing Policies) และ RGP (Role Governing Policies)
+- Passwords เป็นตัวอย่างเท่านั้น ควรเปลี่ยนใน production
+- IP address ใน `gdpr-residency.sentinel` เป็นตัวอย่าง ควรปรับตามความต้องการจริง
 
 ## 🔗 ดูเพิ่มเติม
 
 - [Vault Policies Documentation](https://developer.hashicorp.com/vault/docs/concepts/policies)
 - [Vault Identity](https://developer.hashicorp.com/vault/docs/concepts/identity)
 - [Sentinel Policies](https://developer.hashicorp.com/vault/docs/enterprise/sentinel)
+- [Sentinel Language Documentation](https://docs.hashicorp.com/sentinel)
