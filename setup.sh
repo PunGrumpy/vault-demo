@@ -16,6 +16,24 @@ fi
 readonly ENV_EXAMPLE=".env.example"
 readonly ENV_FILE=".env"
 
+show_banner() {
+    echo -e "${CYAN}"
+    echo "╔═════════════════════════════════════════════[Enterprise]══╗"
+    echo "║                                                           ║"
+    echo "║      ░██    ░██                       ░██    ░██          ║"
+    echo "║      ░██    ░██                       ░██    ░██          ║"
+    echo "║      ░██    ░██  ░██████   ░██    ░██ ░██ ░████████       ║"
+    echo "║      ░██    ░██       ░██  ░██    ░██ ░██    ░██          ║"
+    echo "║       ░██  ░██   ░███████  ░██    ░██ ░██    ░██          ║"
+    echo "║        ░██░██   ░██   ░██  ░██   ░███ ░██    ░██          ║"
+    echo "║         ░███     ░█████░██  ░█████░██ ░██     ░████       ║"
+    echo "║                                                           ║"
+    echo "║                 Environment Setup Script                  ║"
+    echo "║                                                           ║"
+    echo "╚═══════════════════════════════════════════════════════════╝"
+    echo -e "${RESET}"
+}
+
 trim() {
   local str="$1"
   str="${str#"${str%%[![:space:]]*}"}"
@@ -45,6 +63,8 @@ extract_value() {
 
 [[ ! -f "$ENV_EXAMPLE" ]] && echo -e "${RED}[ERROR]${RESET} $ENV_EXAMPLE not found" >&2 && exit 1
 
+show_banner
+
 if [[ -f "$ENV_FILE" ]]; then
   read -p "$(echo -e "${YELLOW}[WARN]${RESET} $ENV_FILE exists. Overwrite? (y/N): ")" -n 1 -r
   echo
@@ -63,7 +83,10 @@ done < "$ENV_EXAMPLE"
 
 [[ ${#keys[@]} -eq 0 ]] && echo -e "${RED}[ERROR]${RESET} No variables found in $ENV_EXAMPLE" >&2 && exit 1
 
-echo -e "${CYAN}[SETUP]${RESET} Environment Setup"
+echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${RESET}"
+echo -e "${CYAN}║${RESET} ${CYAN}[SETUP]${RESET} Environment Setup${CYAN}                                 ║${RESET}"
+echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${RESET}"
+echo ""
 echo "Variables to configure:"
 for key in "${keys[@]}"; do echo "  • $key"; done
 echo
@@ -86,13 +109,21 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
 done < "$ENV_EXAMPLE"
 
-echo -e "${GREEN}[OK]${RESET} Created $ENV_FILE"
-echo -e "${CYAN}[EXPORT]${RESET} Exporting variables..."
 echo ""
-echo -e "${CYAN}[TIP]${RESET} If you only want to export environment variables (without setup),"
-echo "   you can use the scripts in the scripts/ folder:"
-echo "   • For bash: source ./scripts/export.sh"
-echo "   • For fish: source ./scripts/export.fish"
+echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${RESET}"
+echo -e "${GREEN}║${RESET} ${GREEN}[OK]${RESET} Created $ENV_FILE${GREEN}                                         ║${RESET}"
+echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${RESET}"
+echo ""
+echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${RESET}"
+echo -e "${CYAN}║${RESET} ${CYAN}[EXPORT]${RESET} Exporting variables...${CYAN}                           ║${RESET}"
+echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${RESET}"
+echo ""
+echo -e "${CYAN}┌─ ${YELLOW}[TIP]${RESET} ${CYAN}───────────────────────────────────────────────────────────┐${RESET}"
+echo -e "${CYAN}│${RESET} If you only want to export environment variables (without setup),${CYAN} │${RESET}"
+echo -e "${CYAN}│${RESET} you can use the scripts in the scripts/ folder:${CYAN}                   │${RESET}"
+echo -e "${CYAN}│${RESET}   • For bash: source ./scripts/export.sh${CYAN}                          │${RESET}"
+echo -e "${CYAN}│${RESET}   • For fish: source ./scripts/export.fish${CYAN}                        │${RESET}"
+echo -e "${CYAN}└───────────────────────────────────────────────────────────────────┘${RESET}"
 echo ""
 
 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -103,4 +134,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   echo -e "${GREEN}[OK]${RESET} $key = $value"
 done < "$ENV_FILE"
 
-echo -e "${GREEN}[OK]${RESET} Done"
+echo ""
+echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${RESET}"
+echo -e "${GREEN}║${RESET} ${GREEN}[OK]${RESET} Done${GREEN}                                                 ║${RESET}"
+echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${RESET}"
