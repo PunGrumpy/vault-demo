@@ -102,6 +102,8 @@ info "Identity entities created!"
 # =========================
 info "Creating demo secrets..."
 
+vault secrets enable -path=secret kv-v2
+
 vault kv put secret/development/database username="dev_user" password="dev_pass_123"
 vault kv put secret/staging/database username="stg_user" password="stg_pass_456"
 vault kv put secret/production/database username="prod_user" password="prod_pass_SUPER_SECRET"
