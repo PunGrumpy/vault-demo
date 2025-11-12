@@ -1,18 +1,18 @@
 # =========================
-# GDPR Residency Sentinel Policy
+# GDPR Residency EPG Sentinel Policy
 # =========================
 
 import "strings"
 import "sockaddr"
 
-check_cidr = rule {
-	sockaddr.is_contained(request.connection.remote_addr, "129.41.56.7/32")
-}
-
-is_allowed_path = rule {
+precond = rule {
 	strings.has_prefix(request.path, "secret/data/thai-customers/")
 }
 
-main = rule when is_allowed_path {
-	check_cidr
+cidr_check = rule {
+	sockaddr.is_contained(request.connection.remote_addr, "129.41.56.7/32")
+}
+
+main = rule when precond {
+	cidr_check
 }

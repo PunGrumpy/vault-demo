@@ -1,14 +1,12 @@
-# Mock the request global - wrong IP address
 global "request" {
     value = {
-        path = "secret/data/thai-customers/user-123"  # Allowed path
+        path = "secret/data/thai-customers/user-123"
         connection = {
-            remote_addr = "192.168.1.1"  # Not allowed IP address
+            remote_addr = "192.168.1.1"
         }
     }
 }
 
-# Mock the sockaddr import
 mock "sockaddr" {
     module {
         source = "mock-sockaddr.sentinel"
@@ -17,9 +15,9 @@ mock "sockaddr" {
 
 test {
     rules = {
-        main = false  # Should fail because IP is not in allowed CIDR
-        check_cidr = false
-        is_allowed_path = true
+        precond = true
+        cidr_check = false
+        main = false
     }
 }
 

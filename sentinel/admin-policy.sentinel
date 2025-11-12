@@ -1,0 +1,14 @@
+# =========================
+# Admin Policy RGP Sentinel Policy
+# =========================
+
+import "strings"
+
+precond = rule {
+	strings.has_prefix(request.path, "sys/policies/acl/security-admin")
+}
+
+main = rule when precond {
+	identity.entity.metadata.role is "Security Admin" or
+	identity.entity.name is "Charlie Chan"
+}

@@ -1,29 +1,31 @@
 # =========================
-# Production Hours Sentinel Policy
+# Production Hours EPG Sentinel Policy
 # =========================
 
 import "time"
 import "strings"
 
+precond = rule {
+	strings.has_prefix(request.path, "secret/data/production/")
+}
+
 # Working days: Monday - Friday
-is_working_day = rule {
+workdays = rule {
 	time.now.weekday >= 1 and time.now.weekday <= 5
 }
 
 # Business hours: 9 AM - 6 PM (UTC+7 Bangkok time)
-is_business_hours = rule {
+workhours = rule {
 	time.now.hour >= 2 and time.now.hour < 11
 }
 
-is_production_path = rule {
-	strings.has_prefix(request.path, "secret/data/production/")
-}
-
 # Only senior dev
-is_senior = rule {
-	request.entity.metadata.role == "senior-engineer"
+senior = rule {
+	request.entity.metadata.role == "Senior Developer"
 }
 
-main = rule when is_production_path {
-	is_business_hours and is_senior and is_working_day
+main = rule when precond {
+	workdays and
+	workhours and
+	senior
 }
