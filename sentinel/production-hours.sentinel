@@ -26,6 +26,6 @@ senior = rule {
 
 main = rule when precond {
 	workdays and
-	workhours and
+	workhours or
 	senior
 }
