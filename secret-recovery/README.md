@@ -13,6 +13,9 @@
 
 สคริปต์จะสร้าง secret engines, demo secrets และ snapshot อัตโนมัติ
 
+> [!WARN]
+> ตอนนี้ Leader, Followers เป็น `http` ซึ่งถ้า API เข้าสู่ Leader จะทำงานได้ปกติ แต่ถ้า API เข้าสู่ Followers จะทำให้เกิดปัญหา ERROR Protocol downgrade detected.
+
 ## 📖 Demo Scenarios
 
 ### Scenario 1: Disaster Recovery with Snapshots
