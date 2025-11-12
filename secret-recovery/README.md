@@ -1,320 +1,164 @@
+> [!IMPORTANT]
+> Please run [setup.sh](../setup.sh) to setup the environment. Before you run the [setup.sh](./setup.sh) for setup the demo environment!
+
 # 💾 Secret Recovery Demo
 
 สาธิตการใช้งาน HashiCorp Vault สำหรับการสร้าง snapshot และการกู้คืนข้อมูล (disaster recovery) พร้อมการใช้งาน Secret Engines หลายประเภท
 
-## 📋 ภาพรวม
-
-โปรเจกต์นี้สร้าง:
-
-- **KV Secret Engine** (v1) - สำหรับเก็บ secrets แบบ key-value
-- **PKI Secret Engine** - สำหรับการจัดการใบรับรอง (certificates)
-- **Transform Secret Engine** - สำหรับการเข้ารหัสแบบ format-preserving encryption (FPE)
-- **Vault Snapshots** - สำหรับการสำรองข้อมูลและกู้คืน
-
-## 🚀 การใช้งาน
-
-### Quick Start
-
-รันสคริปต์เดียวเพื่อ setup ทุกอย่าง:
+## 🚀 Quick Start
 
 ```bash
 ./setup.sh
 ```
 
-สคริปต์นี้จะทำการ:
+สคริปต์จะสร้าง secret engines, demo secrets และ snapshot อัตโนมัติ
 
-1. ✅ Enable Secret Engines:
+## 📖 Demo Scenarios
 
-   - `secret-recovery` (KV v1) - สำหรับเก็บ application secrets
-   - `pki` - สำหรับการจัดการ certificates
-   - `transform` - สำหรับ format-preserving encryption
+### Scenario 1: Disaster Recovery with Snapshots
 
-2. ✅ สร้าง Demo Secrets:
+**ปัญหา**: ต้องการสำรองข้อมูล Vault ทั้งหมดเพื่อกู้คืนเมื่อเกิด disaster
 
-   - Database credentials สำหรับ development, staging, และ production
-   - PKI root CA certificate
-   - Transform role สำหรับ payment processing
+**วิธีแก้**: ใช้ Vault snapshot เพื่อบันทึกสถานะทั้งหมดของ Vault
 
-3. ✅ สร้าง Snapshot:
-   - สร้างไฟล์ snapshot ที่มี timestamp: `vault-snapshot-YYYYMMDDHHMMSS.snap`
+- ✅ สร้าง snapshot ที่มี timestamp: `vault-snapshot-YYYYMMDDHHMMSS.snap`
+- ✅ Snapshot ประกอบด้วย secrets, policies, และ configuration ทั้งหมด
 
-### ตรวจสอบการติดตั้ง
-
-หลังจากรัน `setup.sh` แล้ว คุณสามารถตรวจสอบได้ว่า:
+**ทดสอบ**:
 
 ```bash
-# ตรวจสอบ secret engines
-vault secrets list
-
-# ตรวจสอบ KV secrets
-vault kv list secret-recovery/
-
-# ตรวจสอบ PKI configuration
-vault read pki/config/urls
-
-# ตรวจสอบ Transform role
-vault read transform/role/payments
-
-# ตรวจสอบ snapshot files
-ls -lh vault-snapshot-*.snap
-```
-
-## 🔐 Demo Secrets
-
-โปรเจกต์นี้สร้าง secrets ต่อไปนี้:
-
-### KV Secrets
-
-| Path                                   | Username    | Password                 |
-| -------------------------------------- | ----------- | ------------------------ |
-| `secret-recovery/development/database` | `dev_user`  | `dev_pass_123`           |
-| `secret-recovery/staging/database`     | `stg_user`  | `stg_pass_456`           |
-| `secret-recovery/production/database`  | `prod_user` | `prod_pass_SUPER_SECRET` |
-
-### PKI Resources
-
-- **Root CA Certificate**: สร้างและบันทึกไว้ที่ `ca_cert.pem`
-- **TTL**: 10 ปี (87600 ชั่วโมง)
-- **Certificate URLs**:
-  - Issuing Certificates: `http://127.0.0.1:8200/v1/pki/ca`
-  - CRL Distribution Points: `http://127.0.0.1:8200/v1/pki/crl`
-
-### Transform Resources
-
-- **Role**: `transform/role/payments`
-- **Transformation**: `transform/transformations/fpe/ccn-fpe`
-  - Template: `ccn` (Credit Card Number)
-  - Tweak Source: `internal`
-  - Allowed Roles: `payments`
-
-## 📸 Snapshot Recovery
-
-Snapshot files (`vault-snapshot-*.snap`) ประกอบด้วยข้อมูลสำรองทั้งหมดของ Vault ณ เวลาที่สร้าง
-
-### การสร้าง Snapshot
-
-Snapshot จะถูกสร้างอัตโนมัติเมื่อรัน `setup.sh` หรือสามารถสร้างได้ด้วยตนเอง:
-
-```bash
+# สร้าง snapshot
 vault operator raft snapshot save ./vault-snapshot-$(date +%Y%m%d%H%M%S).snap
+
+# ตรวจสอบ snapshot
+vault operator raft snapshot inspect vault-snapshot-*.snap
+
+# กู้คืนจาก snapshot (⚠️ จะเขียนทับข้อมูลปัจจุบัน)
+vault operator raft snapshot restore vault-snapshot-*.snap
 ```
 
-### การกู้คืนจาก Snapshot
+### Scenario 2: Multiple Secret Engines
 
-⚠️ **คำเตือน**: การ restore snapshot จะเขียนทับข้อมูลทั้งหมดใน Vault ปัจจุบัน
+**ปัญหา**: ต้องการใช้ Vault เก็บข้อมูลหลายประเภท (secrets, certificates, encrypted data)
+
+**วิธีแก้**: ใช้ Secret Engines หลายประเภทตาม use case
+
+#### KV Secret Engine (v1)
+
+- **Path**: `secret-recovery`
+- **ใช้สำหรับ**: เก็บ application secrets แบบ key-value
+- **Demo Secrets**:
+  - `secret-recovery/development/database`
+  - `secret-recovery/staging/database`
+  - `secret-recovery/production/database`
+
+#### PKI Secret Engine
+
+- **Path**: `pki`
+- **ใช้สำหรับ**: การจัดการและสร้าง X.509 certificates
+- **Demo**: สร้าง Root CA certificate (TTL: 10 ปี)
+
+**ทดสอบ**:
 
 ```bash
-# หยุด Vault server ก่อน (ถ้ากำลังทำงานอยู่)
-vault operator raft snapshot restore vault-snapshot-YYYYMMDDHHMMSS.snap
-```
-
-### ตรวจสอบ Snapshot
-
-```bash
-# ดูข้อมูล snapshot
-vault operator raft snapshot inspect vault-snapshot-YYYYMMDDHHMMSS.snap
-```
-
-## 🧹 Cleanup
-
-เพื่อลบ resources และ secrets ทั้งหมดที่สร้างขึ้น:
-
-```bash
-./cleanup.sh
-```
-
-สคริปต์นี้จะทำการ:
-
-1. ✅ ลบ KV secrets ทั้งหมด
-2. ✅ ลบ PKI configuration
-3. ✅ ลบ Transform engine configuration
-4. ✅ ลบไฟล์ certificate ที่สร้างขึ้น
-
-⚠️ **คำเตือน**: การรัน cleanup script จะลบ secrets ทั้งหมดอย่างถาวร ตรวจสอบให้แน่ใจว่าคุณมี snapshot ไว้สำหรับการกู้คืน
-
-## 📁 โครงสร้างไฟล์
-
-```
-secret-recovery/
-├── README.md                    # ไฟล์นี้
-├── setup.sh                     # สคริปต์สำหรับ setup
-├── cleanup.sh                   # สคริปต์สำหรับ cleanup
-├── .gitignore                   # Git ignore rules
-└── vault-snapshot-*.snap       # Snapshot files (ถูกสร้างอัตโนมัติ)
-```
-
-## 🔍 การทดสอบ
-
-### ทดสอบ KV Secrets
-
-```bash
-# อ่าน development database credentials
-vault kv get secret-recovery/development/database
-
-# อ่าน staging database credentials
-vault kv get secret-recovery/staging/database
-
-# อ่าน production database credentials
+# อ่าน KV secrets
 vault kv get secret-recovery/production/database
-```
 
-### ทดสอบ PKI
-
-```bash
 # ดู PKI configuration
 vault read pki/config/urls
 
 # ดู root certificate
 cat ca_cert.pem
-
-# สร้าง certificate ใหม่ (ตัวอย่าง)
-vault write pki/roles/example-dot-com \
-    allowed_domains=example.com \
-    allow_subdomains=true \
-    max_ttl=72h
 ```
 
-### ทดสอบ Transform Engine
+#### Transform Secret Engine
+
+- **Path**: `transform`
+- **ใช้สำหรับ**: Format-preserving encryption (FPE)
+- **Demo**: สร้าง role `payments` สำหรับเข้ารหัสหมายเลขบัตรเครดิต
+
+**ทดสอบ** (ต้องใช้ Vault Enterprise):
 
 ```bash
-# ดู Transform role
-vault read transform/role/payments
-
-# ทดสอบ encoding (ต้องมี Vault Enterprise)
+# ทดสอบ encoding
 vault write transform/encode/payments value=4532-1234-5678-9010
 
 # ทดสอบ decoding
 vault write transform/decode/payments value=<encoded-value>
 ```
 
-### ทดสอบ Snapshot
+### Scenario 3: Snapshot Recovery Workflow
+
+**ปัญหา**: ต้องการทดสอบ disaster recovery workflow
+
+**วิธีแก้**: สร้าง snapshot → ลบข้อมูล → Restore จาก snapshot
+
+**ทดสอบ**:
 
 ```bash
-# สร้าง snapshot ใหม่
-vault operator raft snapshot save ./test-snapshot.snap
+# 1. สร้าง snapshot
+./setup.sh
 
-# ตรวจสอบ snapshot
-vault operator raft snapshot inspect ./test-snapshot.snap
+# 2. ตรวจสอบว่ามี secrets
+vault kv get secret-recovery/production/database
 
-# ลบ snapshot ทดสอบ
-rm ./test-snapshot.snap
+# 3. ลบ secrets (จำลอง disaster)
+./cleanup.sh
+
+# 4. Restore จาก snapshot
+vault operator raft snapshot restore vault-snapshot-*.snap
+
+# 5. ตรวจสอบว่า secrets กลับมาแล้ว
+vault kv get secret-recovery/production/database
 ```
 
-## 🔐 Secret Engines ที่ใช้
+## 🔐 Secret Engines
 
-### KV Secret Engine (v1)
+| Engine        | Path              | Version    | Use Case                     |
+| ------------- | ----------------- | ---------- | ---------------------------- |
+| **KV**        | `secret-recovery` | v1         | เก็บ application secrets     |
+| **PKI**       | `pki`             | -          | จัดการ X.509 certificates    |
+| **Transform** | `transform`       | Enterprise | Format-preserving encryption |
 
-- **Path**: `secret-recovery`
-- **Version**: v1 (non-versioned)
-- **ใช้สำหรับ**: เก็บ application secrets แบบ key-value
+## 📸 Snapshot Operations
 
-**คำสั่งที่ใช้บ่อย**:
+### สร้าง Snapshot
 
 ```bash
-# อ่าน secret
-vault kv get secret-recovery/development/database
-
-# เขียน secret
-vault kv put secret-recovery/new/path key=value
-
-# ลบ secret
-vault kv delete secret-recovery/path/to/secret
+vault operator raft snapshot save ./vault-snapshot-$(date +%Y%m%d%H%M%S).snap
 ```
 
-### PKI Secret Engine
-
-- **Path**: `pki`
-- **ใช้สำหรับ**: การจัดการและสร้าง X.509 certificates
-
-**คุณสมบัติ**:
-
-- Root CA generation
-- Certificate signing
-- CRL (Certificate Revocation List) management
-- TTL: 10 ปี (87600 ชั่วโมง)
-
-### Transform Secret Engine
-
-- **Path**: `transform`
-- **ใช้สำหรับ**: Format-preserving encryption (FPE)
-- **Template**: Credit Card Number (ccn)
-
-**คุณสมบัติ**:
-
-- รักษารูปแบบของข้อมูลเดิม (เช่น หมายเลขบัตรเครดิต)
-- ใช้สำหรับการเข้ารหัสข้อมูลที่ต้องคงรูปแบบไว้
-
-⚠️ **หมายเหตุ**: Transform Secret Engine ต้องใช้ Vault Enterprise
-
-## 🛡️ Security Notes
-
-⚠️ **ข้อควรระวังด้านความปลอดภัย**:
-
-1. **Snapshot Files**: ไฟล์ snapshot มีข้อมูลที่เข้ารหัสของ Vault ควรเก็บรักษาไว้อย่างปลอดภัยและไม่ควร commit ลง git
-
-2. **Demo Credentials**: Credentials ที่สร้างขึ้นใน demo นี้เป็นเพียงตัวอย่างเท่านั้น ไม่ควรใช้ใน production
-
-3. **Certificate Files**: ไฟล์ `ca_cert.pem` เป็น public certificate สามารถแชร์ได้ แต่ต้องแน่ใจว่า private keys ไม่ถูก commit ลง version control
-
-4. **Access Control**: Demo นี้ไม่ได้ตั้งค่า policies หรือ authentication ในการใช้งานจริงควรตั้งค่า access controls ให้เหมาะสม
-
-5. **Snapshot Storage**: ควรเก็บ snapshot ไว้ในที่ปลอดภัยและมีการ backup หลายชุด
-
-## 🔧 Troubleshooting
-
-### Vault ไม่ทำงาน
-
-หากพบ connection errors ให้ตรวจสอบว่า Vault ทำงานอยู่:
+### ตรวจสอบ Snapshot
 
 ```bash
-vault status
+vault operator raft snapshot inspect vault-snapshot-*.snap
 ```
 
-### Permission Denied
+### กู้คืนจาก Snapshot
 
-ตรวจสอบว่าคุณมี authentication ที่ถูกต้อง:
+⚠️ **คำเตือน**: การ restore จะเขียนทับข้อมูลทั้งหมดใน Vault
 
 ```bash
-# ตรวจสอบ token ปัจจุบัน
-vault token lookup
-
-# Login ใหม่
-vault auth -method=userpass username=<your-username>
+# หยุด Vault server ก่อน (ถ้ากำลังทำงานอยู่)
+vault operator raft snapshot restore vault-snapshot-*.snap
 ```
 
-### Secret Engine มีอยู่แล้ว
-
-หาก secret engine path มีอยู่แล้ว ต้อง disable ก่อน:
+## 🧹 Cleanup
 
 ```bash
-# ตรวจสอบ secret engines
-vault secrets list
-
-# Disable secret engine
-vault secrets disable secret-recovery
-vault secrets disable pki
-vault secrets disable transform
+./cleanup.sh
 ```
 
-### Snapshot ไม่สามารถ restore ได้
+ลบ secrets, PKI configuration, และ Transform engine configuration ทั้งหมด
 
-- ตรวจสอบว่า Vault server หยุดทำงานแล้ว
-- ตรวจสอบว่า snapshot file ไม่เสียหาย
-- ตรวจสอบว่า Vault storage backend รองรับ snapshot restore
-
-### Transform Engine ไม่ทำงาน
-
-- ตรวจสอบว่าคุณใช้ Vault Enterprise
-- ตรวจสอบว่า Transform engine ถูก enable แล้ว
-- ตรวจสอบ license ของ Vault Enterprise
+⚠️ **คำเตือน**: การรัน cleanup จะลบ secrets ทั้งหมดอย่างถาวร ตรวจสอบให้แน่ใจว่าคุณมี snapshot ไว้สำหรับการกู้คืน
 
 ## 📝 หมายเหตุ
 
-- ตรวจสอบให้แน่ใจว่า Vault server ทำงานอยู่ก่อนรันสคริปต์
-- **Transform Secret Engine ต้องใช้ Vault Enterprise**
+- ต้องใช้ **Vault Enterprise** สำหรับ Transform Secret Engine
+- ตรวจสอบให้แน่ใจว่า Vault server ทำงานอยู่ก่อนรัน `setup.sh`
 - Snapshot files จะถูก ignore โดย git (ดูใน `.gitignore`)
-- Passwords และ credentials เป็นตัวอย่างเท่านั้น ควรเปลี่ยนใน production
-- Certificate TTL ถูกตั้งไว้ที่ 10 ปี (87600 ชั่วโมง) สำหรับ demo เท่านั้น
+- Passwords และ credentials เป็นตัวอย่างเท่านั้น
 
 ## 🔗 ดูเพิ่มเติม
 
