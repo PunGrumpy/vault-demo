@@ -71,29 +71,39 @@ vault write auth/userpass/users/charlie \
   policies="security-admin"
 
 vault auth list -format=json | jq -r '.["userpass/"].accessor' > auth_accessor.txt
+vault auth list -format=json | jq -r '.["token/"].accessor' > token_accessor.txt
 
 info "Creating identity entities..."
 
-vault write identity/entity name="Alice Wong" policies="junior-dev" \
+vault write -format=json identity/entity name="alice" policies="junior-dev" \
   metadata=role="Junior Developer" \
   | jq -r '.data.id' > alice_entity_id.txt
-vault write identity/entity-alias name="alice" \
+vault write identity/entity-alias name="alice-userpass" \
   canonical_id=$(cat alice_entity_id.txt) \
   mount_accessor=$(cat auth_accessor.txt)
+vault write identity/entity-alias name="alice-token" \
+  canonical_id=$(cat alice_entity_id.txt) \
+  mount_accessor=$(cat token_accessor.txt)
 
-vault write identity/entity name="Bob Smith" policies="senior-dev" \
+vault write -format=json identity/entity name="bob" policies="senior-dev" \
   metadata=role="Senior Developer" \
   | jq -r '.data.id' > bob_entity_id.txt
-vault write identity/entity-alias name="bob" \
+vault write identity/entity-alias name="bob-userpass" \
   canonical_id=$(cat bob_entity_id.txt) \
   mount_accessor=$(cat auth_accessor.txt)
+vault write identity/entity-alias name="bob-token" \
+  canonical_id=$(cat bob_entity_id.txt) \
+  mount_accessor=$(cat token_accessor.txt)
 
-vault write identity/entity name="Charlie Chan" policies="security-admin" \
+vault write -format=json identity/entity name="charlie" policies="security-admin" \
   metadata=role="Security Admin" \
   | jq -r '.data.id' > charlie_entity_id.txt
-vault write identity/entity-alias name="charlie" \
+vault write identity/entity-alias name="charlie-userpass" \
   canonical_id=$(cat charlie_entity_id.txt) \
   mount_accessor=$(cat auth_accessor.txt)
+vault write identity/entity-alias name="charlie-token" \
+  canonical_id=$(cat charlie_entity_id.txt) \
+  mount_accessor=$(cat token_accessor.txt)
 
 info "Identity entities created!"
 
